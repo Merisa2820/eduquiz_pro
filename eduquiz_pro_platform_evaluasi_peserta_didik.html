@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduQuiz Pro - Platform Evaluasi Peserta Didik</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome untuk Ikon Profesional -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar & Print Styles */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        @keyframes pulse-urgent {
+            0%, 100% { background-color: #fee2e2; color: #dc2626; border-color: #ef4444; }
+            50% { background-color: #ef4444; color: #ffffff; border-color: #b91c1c; }
+        }
+        .timer-urgent {
+            animation: pulse-urgent 1s infinite;
+        }
+
+        /* Aturan Cetak Sertifikat / Ringkasan Hasil */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-area, #printable-area * {
+                visibility: visible;
+            }
+            #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+                background: white !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-800">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Custom Modal Dialog (Pengganti alert/confirm) -->
+    <div id="custom-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 transition-opacity">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 transform transition-all scale-100">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div id="modal-icon-wrapper" class="w-10 h-10 rounded-full flex items-center justify-center bg-indigo-100 text-indigo-600 shrink-0">
+                        <i id="modal-icon" class="fas fa-info-circle text-lg"></i>
+                    </div>
+                    <h3 id="modal-title" class="text-lg font-bold text-slate-900">Konfirmasi</h3>
+                </div>
+                <div id="modal-body" class="text-sm text-slate-600 leading-relaxed mb-6">
+                    Apakah Anda yakin?
+                </div>
+                <div class="flex items-center justify-end gap-3" id="modal-actions">
+                    <button id="modal-cancel-btn" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">
+                        Batal
+                    </button>
+                    <button id="modal-confirm-btn" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">
+                        Ya, Lanjutkan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER UTAMA & NAVIGASI -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3 gap-3">
+                <!-- Logo & Judul -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 cursor-pointer" onclick="app.navigate('home')">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white shadow-md">
+                            <i class="fas fa-graduation-cap text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-extrabold text-xl tracking-tight text-slate-900">EduQuiz <span class="text-indigo-600">Pro</span></span>
+                                <span class="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">CBT v2.4</span>
+                            </div>
+                            <p class="text-xs text-slate-500 font-medium">Platform Evaluasi Peserta Didik</p>
+                        </div>
+                    </div>
+                    <!-- Live Clock Mobile -->
+                    <div class="md:hidden text-right">
+                        <div id="live-clock-mobile" class="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg"></div>
+                    </div>
+                </div>
+
+                <!-- Navigasi Cepat -->
+                <nav class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" id="main-nav">
+                    <button onclick="app.navigate('home')" data-nav="home" class="nav-btn px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
+                        <i class="fas fa-home"></i> Beranda & Kuis
+                    </button>
+                    <button onclick="app.navigate('student-login')" data-nav="student" class="nav-btn px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
+                        <i class="fas fa-user-edit"></i> Mode Siswa
+                    </button>
+                    <button onclick="app.navigate('teacher')" data-nav="teacher" class="nav-btn px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
+                        <i class="fas fa-chalkboard-teacher"></i> Mode Guru / Soal
+                    </button>
+                    <button onclick="app.navigate('analytics')" data-nav="analytics" class="nav-btn px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition">
+                        <i class="fas fa-chart-bar"></i> Rekap & Analitik
+                    </button>
+                </nav>
+
+                <!-- Informasi Waktu Desktop -->
+                <div class="hidden md:flex items-center gap-3 bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-xl">
+                    <i class="far fa-clock text-indigo-600"></i>
+                    <div class="text-xs">
+                        <div id="live-date" class="text-slate-500 font-medium">Memuat tanggal...</div>
+                        <div id="live-clock" class="font-bold text-slate-800 tracking-wide">00:00:00 WIB</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- KONTEN UTAMA DINAMIS -->
+    <main id="app-content" class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <!-- View akan dirender di sini oleh JavaScript -->
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 mt-auto py-5 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-shield-alt text-indigo-600"></i>
+                <span><strong>EduQuiz Pro</strong> &copy; 2026 — Sistem Evaluasi Pembelajaran Digital Mandiri.</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="app.resetDemoData()" class="text-slate-400 hover:text-rose-600 transition underline">
+                    Reset Data Bawaan
+                </button>
+                <span>Penyimpanan Lokal Aktif</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- LOGIKA APLIKASI JAVASCRIPT -->
+    <script>
+        /**
+         * ============================================================================
+         * EDUQUIZ PRO - STATE MANAGEMENT & SEED DATA
+         * ============================================================================
+         */
+        const STORAGE_KEYS = {
+            QUIZZES: 'eduquiz_pro_quizzes_v1',
+            RESULTS: 'eduquiz_pro_results_v1'
+        };
+
+        // Data Paket Kuis Bawaan (Seed Data) agar langsung siap diuji coba
+        const DEFAULT_QUIZZES = [
+            {
+                id: 'QZ-MTK-01',
+                title: 'Evaluasi Aljabar & Persamaan Linear',
+                subject: 'Matematika Dasar',
+                duration: 15, // menit
+                kkm: 75,
+                description: 'Uji pemahaman konsep operasi bentuk aljabar, persamaan linear satu variabel, dan sistem persamaan dasar.',
+                questions: [
+                    {
+                        id: 'q1',
+                        type: 'mcq',
+                        text: 'Jika 3x + 7 = 22, maka nilai dari 2x - 1 adalah ...',
+                        options: ['7', '9', '10', '11', '15'],
+                        answer: '1', // Index opsi (0=A, 1=B, dst) -> '9'
+                        points: 20,
+                        explanation: 'Langkah 1: 3x = 22 - 7 → 3x = 15 → x = 5. Langkah 2: Substitusi x = 5 ke 2x - 1 = 2(5) - 1 = 9.'
+                    },
+                    {
+                        id: 'q2',
+                        type: 'mcq',
+                        text: 'Bentuk sederhana dari 4(2a - 3b) - 2(a - 5b) adalah ...',
+                        options: ['6a - 2b', '6a - 22b', '10a - 2b', '6a + 2b', '8a - 2b'],
+                        answer: '0',
+                        points: 20,
+                        explanation: 'Jabarkan kurung: (8a - 12b) - (2a - 10b) = 8a - 2a - 12b + 10b = 6a - 2b.'
+                    },
+                    {
+                        id: 'q3',
+                        type: 'tf',
+                        text: 'Bilangan prima adalah bilangan asli yang lebih besar dari 1 dan hanya memiliki dua faktor pembagi, yaitu 1 dan bilangan itu sendiri. Dengan demikian, angka 1 termasuk bilangan prima.',
+                        options: ['Benar', 'Salah'],
+                        answer: '1', // Salah
+                        points: 20,
+                        explanation: 'Pernyataan tersebut SALAH. Angka 1 hanya memiliki satu faktor pembagi (yaitu 1 itu sendiri), sehingga 1 bukan bilangan prima. Bilangan prima terkecil adalah 2.'
+                    },
+                    {
+                        id: 'q4',
+                        type: 'short',
+                        text: 'Sebuah persegi panjang memiliki panjang 12 cm dan lebar 8 cm. Berapa sentimeter (cm) keliling persegi panjang tersebut? (Tulis angkanya saja)',
+                        options: [],
+                        answer: '40',
+                        points: 20,
+                        explanation: 'Rumus Keliling Persegi Panjang = 2 × (p + l) = 2 × (12 + 8) = 2 × 20 = 40 cm.'
+                    },
+                    {
+                        id: 'q5',
+                        type: 'mcq',
+                        text: 'Harga 3 buku tulis dan 2 pensil adalah Rp16.000. Jika harga 1 pensil adalah Rp2.000, berapakah harga 1 buku tulis?',
+                        options: ['Rp3.000', 'Rp3.500', 'Rp4.000', 'Rp4.500', 'Rp5.000'],
+                        answer: '2',
+                        points: 20,
+                        explanation: '3 buku + 2(2.000) = 16.000 → 3 buku + 4.000 = 16.000 → 3 buku = 12.000 → 1 buku = Rp4.000.'
+                    }
+                ]
+            },
+            {
+                id: 'QZ-IPA-02',
+                title: 'Sistem Organ Manusia & Ekosistem',
+                subject: 'Ilmu Pengetahuan Alam',
+                duration: 12,
+                kkm: 70,
+                description: 'Evaluasi struktur fungsi organ pernapasan, peredaran darah, dan interaksi komponen biotik-abiotik.',
+                questions: [
+                    {
+                        id: 'q1',
+                        type: 'mcq',
+                        text: 'Pertukaran gas oksigen (O2) dan karbon dioksida (CO2) di dalam paru-paru terjadi tepatnya pada bagian ...',
+                        options: ['Trakea', 'Bronkus', 'Bronkiolus', 'Alveolus', 'Laring'],
+                        answer: '3',
+                        points: 25,
+                        explanation: 'Alveolus merupakan kantung udara berdinding tipis yang dikelilingi kapiler darah sebagai tempat difusi/pertukaran gas O2 dan CO2.'
+                    },
+                    {
+                        id: 'q2',
+                        type: 'tf',
+                        text: 'Pembuluh darah arteri (nadi) berfungsi mengalirkan darah yang kaya akan oksigen keluar dari jantung menuju seluruh tubuh (kecuali arteri pulmonalis).',
+                        options: ['Benar', 'Salah'],
+                        answer: '0',
+                        points: 25,
+                        explanation: 'BENAR. Arteri membawa darah keluar dari jantung dengan tekanan tinggi, umumnya kaya oksigen kecuali arteri pulmonalis yang menuju paru-paru.'
+                    },
+                    {
+                        id: 'q3',
+                        type: 'short',
+                        text: 'Proses pembuatan makanan pada tumbuhan hijau dengan bantuan energi cahaya matahari disebut ...',
+                        options: [],
+                        answer: 'fotosintesis',
+                        points: 25,
+                        explanation: 'Fotosintesis adalah proses biokimia pembentukan karbohidrat dari air dan karbon dioksida oleh klorofil dengan bantuan cahaya matahari.'
+                    },
+                    {
+                        id: 'q4',
+                        type: 'mcq',
+                        text: 'Dalam rantai makanan di sawah: Padi → Tikus → Ular → Elang. Jika populasi ular menurun drastis akibat perburuan, dampak langsung yang terjadi adalah ...',
+                        options: ['Populasi padi meningkat pesat', 'Populasi tikus meningkat pesat', 'Populasi elang bertambah banyak', 'Populasi tikus ikut punah', 'Tidak ada perubahan ekosistem'],
+                        answer: '1',
+                        points: 25,
+                        explanation: 'Ular adalah predator alami tikus. Jika ular berkurang, pemangsa tikus hilang sehingga populasi tikus akan meningkat pesat dan merusak tanaman padi.'
+                    }
+                ]
+            },
+            {
+                id: 'QZ-BIN-03',
+                title: 'Pemahaman Bacaan & Kaidah Kebahasaan (PUEBI)',
+                subject: 'Bahasa Indonesia',
+                duration: 10,
+                kkm: 75,
+                description: 'Latihan menentukan ide pokok paragraf, penggunaan kata baku, dan penulisan tanda baca yang tepat.',
+                questions: [
+                    {
+                        id: 'q1',
+                        type: 'mcq',
+                        text: 'Manakah di bawah ini yang merupakan penulisan kata baku sesuai KBBI?',
+                        options: ['Apotik, Praktek, Analisa', 'Apotek, Praktik, Analisis', 'Apotek, Praktek, Analisis', 'Apotik, Praktik, Analisa', 'Apotek, Praktik, Analis'],
+                        answer: '1',
+                        points: 25,
+                        explanation: 'Bentuk baku menurut KBBI adalah Apotek (bukan apotik), Praktik (bukan praktek), dan Analisis (bukan analisa).'
+                    },
+                    {
+                        id: 'q2',
+                        type: 'tf',
+                        text: 'Penulisan kata depan "di" pada kalimat "Buku itu diletakkan di atas meja" sudah sesuai dengan kaidah Ejaan Bahasa Indonesia.',
+                        options: ['Benar', 'Salah'],
+                        answer: '0',
+                        points: 25,
+                        explanation: 'BENAR. "diletakkan" adalah kata kerja pasif (imbuhan di- digabung), sedangkan "di atas" menunjukkan tempat (kata depan di dipisah).'
+                    },
+                    {
+                        id: 'q3',
+                        type: 'mcq',
+                        text: 'Majas yang menggambarkan benda mati seolah-olah memiliki sifat atau perilaku seperti manusia disebut majas ...',
+                        options: ['Hiperbola', 'Metafora', 'Personifikasi', 'Simile', 'Litotes'],
+                        answer: '2',
+                        points: 25,
+                        explanation: 'Personifikasi adalah gaya bahasa yang menginsankan benda mati, contoh: "Angin malam berbisik lembut".'
+                    },
+                    {
+                        id: 'q4',
+                        type: 'short',
+                        text: 'Kalimat utama yang terletak di awal paragraf disebut paragraf ...',
+                        options: [],
+                        answer: 'deduktif',
+                        points: 25,
+                        explanation: 'Paragraf deduktif memiliki ide pokok di awal paragraf, sedangkan induktif di akhir paragraf.'
+                    }
+                ]
+            },
+            {
+                id: 'QZ-SEJ-04',
+                title: 'Sejarah Pergerakan Nasional & Kemerdekaan',
+                subject: 'Sejarah & Kebangsaan',
+                duration: 10,
+                kkm: 70,
+                description: 'Menguji wawasan sejarah lahirnya organisasi pergerakan nasional hingga peristiwa Proklamasi 1945.',
+                questions: [
+                    {
+                        id: 'q1',
+                        type: 'mcq',
+                        text: 'Organisasi modern pertama di Indonesia yang didirikan pada tanggal 20 Mei 1908 oleh Dr. Sutomo dan para mahasiswa STOVIA adalah ...',
+                        options: ['Sarekat Islam', 'Indische Partij', 'Budi Utomo', 'Perhimpunan Indonesia', 'Taman Siswa'],
+                        answer: '2',
+                        points: 25,
+                        explanation: 'Budi Utomo didirikan pada 20 Mei 1908 dan diperingati setiap tahun sebagai Hari Kebangkitan Nasional.'
+                    },
+                    {
+                        id: 'q2',
+                        type: 'short',
+                        text: 'Naskah Proklamasi Kemerdekaan Indonesia diketik oleh tokoh pemuda bernama ...',
+                        options: [],
+                        answer: 'sayuti melik',
+                        points: 25,
+                        explanation: 'Sayuti Melik mengetik naskah proklamasi yang telah disusun oleh Soekarno, Moh. Hatta, dan Achmad Soebardjo di rumah Laksamana Maeda.'
+                    },
+                    {
+                        id: 'q3',
+                        type: 'tf',
+                        text: 'Peristiwa Rengasdengklok terjadi karena adanya perbedaan pendapat antara golongan tua dan golongan muda mengenai waktu pelaksanaan Proklamasi Kemerdekaan.',
+                        options: ['Benar', 'Salah'],
+                        answer: '0',
+                        points: 25,
+                        explanation: 'BENAR. Golongan muda mendesak agar proklamasi segera dilakukan tanpa menunggu janji Jepang (PPKI), sehingga mengamankan Soekarno-Hatta ke Rengasdengklok.'
+                    },
+                    {
+                        id: 'q4',
+                        type: 'mcq',
+                        text: 'Kongres Pemuda II yang melahirkan ikrar Sumpah Pemuda diselenggarakan pada tanggal ...',
+                        options: ['20 Mei 1908', '17 Agustus 1945', '28 Oktober 1928', '10 November 1945', '1 Juni 1945'],
+                        answer: '2',
+                        points: 25,
+                        explanation: 'Kongres Pemuda II dilaksanakan pada 27–28 Oktober 1928 di Batavia (Jakarta) dan menghasilkan ikrar Sumpah Pemuda.'
+                    }
+                ]
+            }
+        ];
+
+        // Contoh Riwayat Nilai Awal agar Dashboard Analitik langsung hidup
+        const DEFAULT_RESULTS = [
+            {
+                id: 'RES-1001',
+                studentName: 'Alya Putri Ramadhani',
+                nis: '20260104',
+                studentClass: 'XI-IPA-1',
+                quizId: 'QZ-MTK-01',
+                quizTitle: 'Evaluasi Aljabar & Persamaan Linear',
+                subject: 'Matematika Dasar',
+                score: 100,
+                kkm: 75,
+                passed: true,
+                correctCount: 5,
+                wrongCount: 0,
+                emptyCount: 0,
+                totalQuestions: 5,
+                timeSpentSeconds: 412,
+                submittedAt: '12 Nov 2026, 09:15',
+                answers: { 0: '1', 1: '0', 2: '1', 3: '40', 4: '2' }
+            },
+            {
+                id: 'RES-1002',
+                studentName: 'Bima Sakti Nugraha',
+                nis: '20260112',
+                studentClass: 'XI-IPA-1',
+                quizId: 'QZ-MTK-01',
+                quizTitle: 'Evaluasi Aljabar & Persamaan Linear',
+                subject: 'Matematika Dasar',
+                score: 80,
+                kkm: 75,
+                passed: true,
+                correctCount: 4,
+                wrongCount: 1,
+                emptyCount: 0,
+                totalQuestions: 5,
+                timeSpentSeconds: 530,
+                submittedAt: '12 Nov 2026, 09:22',
+                answers: { 0: '1', 1: '0', 2: '0', 3: '40', 4: '2' }
+            },
+            {
+                id: 'RES-1003',
+                studentName: 'Citra Kirana Dewi',
+                nis: '20260205',
+                studentClass: 'X-A',
+                quizId: 'QZ-IPA-02',
+                quizTitle: 'Sistem Organ Manusia & Ekosistem',
+                subject: 'Ilmu Pengetahuan Alam',
+                score: 75,
+                kkm: 70,
+                passed: true,
+                correctCount: 3,
+                wrongCount: 1,
+                emptyCount: 0,
+                totalQuestions: 4,
+                timeSpentSeconds: 380,
+                submittedAt: '12 Nov 2026, 10:40',
+                answers: { 0: '3', 1: '0', 2: 'fotosintesis', 3: '0' }
+            },
+            {
+                id: 'RES-1004',
+                studentName: 'Dimas Pratama Putra',
+                nis: '20260318',
+                studentClass: 'XII-IPS-2',
+                quizId: 'QZ-SEJ-04',
+                quizTitle: 'Sejarah Pergerakan Nasional & Kemerdekaan',
+                subject: 'Sejarah & Kebangsaan',
+                score: 50,
+                kkm: 70,
+                passed: false,
+                correctCount: 2,
+                wrongCount: 2,
+                emptyCount: 0,
+                totalQuestions: 4,
+                timeSpentSeconds: 295,
+                submittedAt: '13 Nov 2026, 05:50',
+                answers: { 0: '2', 1: 'soekarno', 2: '0', 3: '0' }
+            }
+        ];
+
+        /**
+         * ============================================================================
+         * APLIKASI UTAMA (SINGLE STATE CONTROLLER)
+         * ============================================================================
+         */
+        const app = {
+            state: {
+                currentView: 'home', // 'home', 'student-login', 'quiz-instructions', 'quiz-active', 'quiz-result', 'teacher', 'analytics'
+                quizzes: [],
+                results: [],
+                
+                // State Sesi Siswa
+                studentSession: {
+                    name: '',
+                    nis: '',
+                    studentClass: 'XI-IPA-1',
+                    selectedQuizId: '',
+                    activeQuiz: null,
+                    currentQuestionIndex: 0,
+                    answers: {}, // { questionIndex: userAnswerString }
+                    flagged: {}, // { questionIndex: boolean }
+                    remainingSeconds: 0,
+                    totalDurationSeconds: 0,
+                    timerInterval: null,
+                    lastResult: null
+                },
+
+                // State Mode Guru
+                teacherState: {
+                    editingQuizId: null, // null jika list, 'NEW' atau ID kuis jika sedang form
+                    draftQuiz: null
+                },
+
+                // State Filter Analitik
+                analyticsFilter: {
+                    search: '',
+                    classFilter: 'ALL',
+                    quizFilter: 'ALL'
+                }
+            },
+
+            // Inisialisasi Aplikasi
+            init() {
+                this.loadData();
+                this.startClock();
+                this.render();
+            },
+
+            // Muat data dari localStorage atau gunakan Seed Data
+            loadData() {
+                try {
+                    const savedQuizzes = localStorage.getItem(STORAGE_KEYS.QUIZZES);
+                    const savedResults = localStorage.getItem(STORAGE_KEYS.RESULTS);
+
+                    if (savedQuizzes) {
+                        this.state.quizzes = JSON.parse(savedQuizzes);
+                    } else {
+                        this.state.quizzes = JSON.parse(JSON.stringify(DEFAULT_QUIZZES));
+                        this.saveQuizzes();
+                    }
+
+                    if (savedResults) {
+                        this.state.results = JSON.parse(savedResults);
+                    } else {
+                        this.state.results = JSON.parse(JSON.stringify(DEFAULT_RESULTS));
+                        this.saveResults();
+                    }
+                } catch (e) {
+                    console.error('Gagal memuat localStorage:', e);
+                    this.state.quizzes = JSON.parse(JSON.stringify(DEFAULT_QUIZZES));
+                    this.state.results = JSON.parse(JSON.stringify(DEFAULT_RESULTS));
+                }
+            },
+
+            saveQuizzes() {
+                localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(this.state.quizzes));
+            },
+
+            saveResults() {
+                localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(this.state.results));
+            },
+
+            resetDemoData() {
+                this.showConfirm(
+                    'Reset Data Aplikasi?',
+                    'Semua paket kuis kustom dan riwayat nilai akan dikembalikan ke data awal bawaan. Lanjutkan?',
+                    () => {
+                        localStorage.removeItem(STORAGE_KEYS.QUIZZES);
+                        localStorage.removeItem(STORAGE_KEYS.RESULTS);
+                        this.loadData();
+                        this.showToast('Data berhasil dikembalikan ke pengaturan awal.', 'success');
+                        this.render();
+                    },
+                    'danger'
+                );
+            },
+
+            // Jam Real-time di Header
+            startClock() {
+                const updateTime = () => {
+                    const now = new Date();
+                    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                    
+                    const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+                    const timeStr = now.toTimeString().split(' ')[0] + ' WIB';
+
+                    const elDate = document.getElementById('live-date');
+                    const elClock = document.getElementById('live-clock');
+                    const elMobile = document.getElementById('live-clock-mobile');
+
+                    if (elDate) elDate.textContent = dateStr;
+                    if (elClock) elClock.textContent = timeStr;
+                    if (elMobile) elMobile.textContent = timeStr;
+                };
+                updateTime();
+                setInterval(updateTime, 1000);
+            },
+
+            // Navigasi antar halaman dengan pengamanan jika sedang ujian
+            navigate(view, preselectedQuizId = null) {
+                if (this.state.currentView === 'quiz-active' && view !== 'quiz-result') {
+                    this.showConfirm(
+                        'Ujian Sedang Berlangsung!',
+                        'Anda sedang dalam sesi pengerjaan kuis. Jika keluar sekarang, progres pengerjaan Anda akan hilang. Yakin ingin keluar?',
+                        () => {
+                            this.stopQuizTimer();
+                            this._performNavigate(view, preselectedQuizId);
+                        },
+                        'danger'
+                    );
+                    return;
+                }
+                this._performNavigate(view, preselectedQuizId);
+            },
+
+            _performNavigate(view, preselectedQuizId) {
+                this.state.currentView = view;
+                if (preselectedQuizId) {
+                    this.state.studentSession.selectedQuizId = preselectedQuizId;
+                }
+                if (view === 'teacher') {
+                    this.state.teacherState.editingQuizId = null;
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                this.render();
+            },
+
+            // Update styling tombol navigasi aktif
+            updateNavHighlight() {
+                const view = this.state.currentView;
+                let activeKey = 'home';
+                if (['student-login', 'quiz-instructions', 'quiz-active', 'quiz-result'].includes(view)) {
+                    activeKey = 'student';
+                } else if (view === 'teacher') {
+                    activeKey = 'teacher';
+                } else if (view === 'analytics') {
+                    activeKey = 'analytics';
+                }
+
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    const key = btn.getAttribute('data-nav');
+                    if (key === activeKey) {
+                        btn.className = 'nav-btn px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition bg-indigo-600 text-white shadow-sm';
+                    } else {
+                        btn.className = 'nav-btn px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition text-slate-600 hover:bg-slate-100 hover:text-slate-900';
+                    }
+                });
+            },
+
+            /**
+             * ========================================================================
+             * UI HELPERS: TOAST & MODAL DIALOG
+             * ========================================================================
+             */
+            showToast(message, type = 'info') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                
+                const styles = {
+                    success: 'bg-emerald-600 text-white border-emerald-700',
+                    error: 'bg-rose-600 text-white border-rose-700',
+                    warning: 'bg-amber-500 text-white border-amber-600',
+                    info: 'bg-slate-800 text-white border-slate-900'
+                };
+                const icons = {
+                    success: 'fa-check-circle',
+                    error: 'fa-exclamation-circle',
+                    warning: 'fa-exclamation-triangle',
+                    info: 'fa-info-circle'
+                };
+
+                toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium transform transition-all duration-300 translate-y-2 opacity-0 ${styles[type] || styles.info}`;
+                toast.innerHTML = `
+                    <i class="fas ${icons[type] || icons.info} text-base shrink-0"></i>
+                    <span class="flex-1">${message}</span>
+                `;
+
+                container.appendChild(toast);
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-y-2', 'opacity-0');
+                });
+
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3500);
+            },
+
+            showConfirm(title, bodyHtml, onConfirm, variant = 'primary') {
+                const modal = document.getElementById('custom-modal');
+                const titleEl = document.getElementById('modal-title');
+                const bodyEl = document.getElementById('modal-body');
+                const confirmBtn = document.getElementById('modal-confirm-btn');
+                const cancelBtn = document.getElementById('modal-cancel-btn');
+                const iconWrapper = document.getElementById('modal-icon-wrapper');
+                const iconEl = document.getElementById('modal-icon');
+
+                titleEl.textContent = title;
+                bodyEl.innerHTML = bodyHtml;
+
+                if (variant === 'danger') {
+                    iconWrapper.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-rose-100 text-rose-600 shrink-0';
+                    iconEl.className = 'fas fa-exclamation-triangle text-lg';
+                    confirmBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition';
+                } else {
+                    iconWrapper.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-indigo-100 text-indigo-600 shrink-0';
+                    iconEl.className = 'fas fa-question-circle text-lg';
+                    confirmBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition';
+                }
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                const close = () => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                };
+
+                cancelBtn.onclick = close;
+                confirmBtn.onclick = () => {
+                    close();
+                    if (onConfirm) onConfirm();
+                };
+            },
+
+            /**
+             * ========================================================================
+             * RENDER DISPATCHER
+             * ========================================================================
+             */
+            render() {
+                this.updateNavHighlight();
+                const container = document.getElementById('app-content');
+
+                switch (this.state.currentView) {
+                    case 'home':
+                        container.innerHTML = this.renderHomeView();
+                        break;
+                    case 'student-login':
+                        container.innerHTML = this.renderStudentLoginView();
+                        break;
+                    case 'quiz-instructions':
+                        container.innerHTML = this.renderQuizInstructionsView();
+                        break;
+                    case 'quiz-active':
+                        container.innerHTML = this.renderQuizActiveView();
+                        break;
+                    case 'quiz-result':
+                        container.innerHTML = this.renderQuizResultView();
+                        break;
+                    case 'teacher':
+                        container.innerHTML = this.renderTeacherView();
+                        break;
+                    case 'analytics':
+                        container.innerHTML = this.renderAnalyticsView();
+                        break;
+                    default:
+                        container.innerHTML = this.renderHomeView();
+                }
+            },
+
+            /**
+             * ========================================================================
+             * 1. TAMPILAN BERANDA & PILIH KUIS
+             * ========================================================================
+             */
+            renderHomeView() {
+                const totalQuizzes = this.state.quizzes.length;
+                const totalQuestions = this.state.quizzes.reduce((acc, q) => acc + q.questions.length, 0);
+                const totalAttempts = this.state.results.length;
+
+                return `
+                    <!-- Hero Section -->
+                    <div class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-blue-600 rounded-3xl p-6 sm:p-10 text-white shadow-xl mb-8 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+                        <div class="relative z-10 max-w-3xl">
+                            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-semibold tracking-wide mb-4 border border-white/20">
+                                <i class="fas fa-sparkles text-amber-300"></i> Sistem Asesmen Berbasis Komputer (CBT)
+                            </span>
+                            <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight mb-3">
+                                Evaluasi Belajar Lebih Interaktif, Akurat, & Terukur
+                            </h1>
+                            <p class="text-indigo-100 text-sm sm:text-base leading-relaxed mb-6">
+                                Kerjakan paket kuis evaluasi dengan koreksi otomatis dan pembahasan mendalam, atau kelola bank soal serta pantau analitik capaian peserta didik secara real-time.
+                            </p>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <button onclick="app.navigate('student-login')" class="px-6 py-3 rounded-xl bg-white text-indigo-700 font-bold text-sm hover:bg-indigo-50 shadow-md transition flex items-center gap-2">
+                                    <i class="fas fa-play-circle"></i> Mulai Kerjakan Kuis
+                                </button>
+                                <button onclick="app.navigate('teacher')" class="px-6 py-3 rounded-xl bg-indigo-800/60 hover:bg-indigo-800 text-white font-semibold text-sm border border-indigo-400/30 transition flex items-center gap-2">
+                                    <i class="fas fa-plus-circle"></i> Kelola Bank Soal (Guru)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistik Ringkas Platform -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shrink-0">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-extrabold text-slate-900">${totalQuizzes} Paket</div>
+                                <div class="text-xs font-medium text-slate-500">Kuis Evaluasi Tersedia</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                                <i class="fas fa-list-ol"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-extrabold text-slate-900">${totalQuestions} Butir</div>
+                                <div class="text-xs font-medium text-slate-500">Total Bank Pertanyaan</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-extrabold text-slate-900">${totalAttempts} Pengerjaan</div>
+                                <div class="text-xs font-medium text-slate-500">Riwayat Evaluasi Tersimpan</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daftar Paket Kuis Siap Dikerjakan -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Daftar Paket Kuis Tersedia</h2>
+                            <p class="text-xs text-slate-500">Pilih salah satu paket mata pelajaran di bawah ini untuk langsung memulai ujian.</p>
+                        </div>
+                        <button onclick="app.navigate('analytics')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 self-start sm:self-auto">
+                            Lihat Rekap Nilai Siswa <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5">
+                        ${this.state.quizzes.map(quiz => `
+                            <div class="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-sm hover:shadow-md transition p-6 flex flex-col justify-between group">
+                                <div>
+                                    <div class="flex items-center justify-between gap-2 mb-3">
+                                        <span class="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold">
+                                            ${this.escapeHtml(quiz.subject)}
+                                        </span>
+                                        <span class="text-xs font-mono font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-md">
+                                            ${this.escapeHtml(quiz.id)}
+                                        </span>
+                                    </div>
+                                    <h3 class="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition mb-2">
+                                        ${this.escapeHtml(quiz.title)}
+                                    </h3>
+                                    <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                                        ${this.escapeHtml(quiz.description || 'Evaluasi pemahaman materi dan kompetensi peserta didik.')}
+                                    </p>
+                                </div>
+                                
+                                <div>
+                                    <div class="grid grid-cols-3 gap-2 py-3 px-3 bg-slate-50 rounded-xl border border-slate-100 mb-4 text-center">
+                                        <div>
+                                            <div class="text-[11px] text-slate-400 font-medium">Jumlah Soal</div>
+                                            <div class="text-xs font-bold text-slate-800"><i class="far fa-file-alt text-indigo-500 mr-1"></i>${quiz.questions.length} Soal</div>
+                                        </div>
+                                        <div class="border-x border-slate-200">
+                                            <div class="text-[11px] text-slate-400 font-medium">Durasi</div>
+                                            <div class="text-xs font-bold text-slate-800"><i class="far fa-clock text-amber-500 mr-1"></i>${quiz.duration} Menit</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-[11px] text-slate-400 font-medium">Nilai KKM</div>
+                                            <div class="text-xs font-bold text-emerald-600"><i class="fas fa-award mr-1"></i>${quiz.kkm}</div>
+                                        </div>
+                                    </div>
+
+                                    <button onclick="app.navigate('student-login', '${quiz.id}')" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                                        <span>Kerjakan Paket Ini</span>
+                                        <i class="fas fa-arrow-right text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            },
+
+            /**
+             * ========================================================================
+             * 2A. MODE SISWA: REGISTRASI / MASUK PESERTA DIDIK
+             * ========================================================================
+             */
+            renderStudentLoginView() {
+                const s = this.state.studentSession;
+                const selectedId = s.selectedQuizId || (this.state.quizzes[0] ? this.state.quizzes[0].id : '');
+
+                return `
+                    <div class="max-w-xl mx-auto">
+                        <div class="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
+                            <div class="bg-indigo-600 px-6 py-6 text-white">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center text-xl">
+                                        <i class="fas fa-id-card"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-xl font-bold">Identitas Peserta Didik</h2>
+                                        <p class="text-xs text-indigo-100">Lengkapi data diri Anda sebelum memasuki ruang ujian.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form onsubmit="app.handleStudentLogin(event)" class="p-6 sm:p-8 space-y-5">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                                        Nama Lengkap Peserta Didik <span class="text-rose-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                            <i class="fas fa-user"></i>
+                                        </span>
+                                        <input type="text" id="input-student-name" required value="${this.escapeHtml(s.name)}"
+                                            placeholder="Contoh: Muhammad Rizky Pratama"
+                                            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-sm transition">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                                            NIS / Nomor Absen <span class="text-rose-500">*</span>
+                                        </label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                                <i class="fas fa-hashtag"></i>
+                                            </span>
+                                            <input type="text" id="input-student-nis" required value="${this.escapeHtml(s.nis)}"
+                                                placeholder="Contoh: 20260145"
+                                                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-sm transition">
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                                            Kelas / Rombel <span class="text-rose-500">*</span>
+                                        </label>
+                                        <select id="input-student-class" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-sm bg-white transition">
+                                            ${['X-A', 'X-B', 'X-C', 'XI-IPA-1', 'XI-IPA-2', 'XI-IPS-1', 'XII-IPA-1', 'XII-IPS-2'].map(cls => `
+                                                <option value="${cls}" ${s.studentClass === cls ? 'selected' : ''}>${cls}</option>
+                                            `).join('')}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                                        Pilih Paket Kuis / Kode Ujian <span class="text-rose-500">*</span>
+                                    </label>
+                                    <select id="input-student-quiz" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-sm bg-white transition">
+                                        ${this.state.quizzes.map(q => `
+                                            <option value="${q.id}" ${selectedId === q.id ? 'selected' : ''}>
+                                                [${q.id}] ${this.escapeHtml(q.subject)} - ${this.escapeHtml(q.title)} (${q.questions.length} Soal)
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+
+                                <div class="pt-2 flex items-center justify-between gap-3">
+                                    <button type="button" onclick="app.navigate('home')" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">
+                                        Kembali
+                                    </button>
+                                    <button type="submit" class="flex-1 py-2.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2">
+                                        <span>Lanjut ke Petunjuk Kuis</span>
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            },
+
+            handleStudentLogin(e) {
+                e.preventDefault();
+                const name = document.getElementById('input-student-name').value.trim();
+                const nis = document.getElementById('input-student-nis').value.trim();
+                const studentClass = document.getElementById('input-student-class').value;
+                const quizId = document.getElementById('input-student-quiz').value;
+
+                if (!name || !nis) {
+                    this.showToast('Nama lengkap dan NIS wajib diisi!', 'error');
+                    return;
+                }
+
+                const quiz = this.state.quizzes.find(q => q.id === quizId);
+                if (!quiz || quiz.questions.length === 0) {
+                    this.showToast('Paket kuis tidak valid atau belum memiliki butir soal.', 'error');
+                    return;
+                }
+
+                this.state.studentSession.name = name;
+                this.state.studentSession.nis = nis;
+                this.state.studentSession.studentClass = studentClass;
+                this.state.studentSession.selectedQuizId = quizId;
+                this.state.studentSession.activeQuiz = quiz;
+
+                this.state.currentView = 'quiz-instructions';
+                this.render();
+            },
+
+            /**
+             * ========================================================================
+             * 2B. MODE SISWA: LAYAR INSTRUKSI KUIS
+             * ========================================================================
+             */
+            renderQuizInstructionsView() {
+                const s = this.state.studentSession;
+                const quiz = s.activeQuiz;
+                if (!quiz) return this.renderStudentLoginView();
+
+                return `
+                    <div class="max-w-2xl mx-auto">
+                        <div class="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
+                            <div class="p-6 sm:p-8 border-b border-slate-100">
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                    <span class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">
+                                        ${this.escapeHtml(quiz.subject)}
+                                    </span>
+                                    <span class="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                                        Kode Paket: <strong>${this.escapeHtml(quiz.id)}</strong>
+                                    </span>
+                                </div>
+                                <h2 class="text-2xl font-extrabold text-slate-900 mb-2">${this.escapeHtml(quiz.title)}</h2>
+                                <p class="text-sm text-slate-500">${this.escapeHtml(quiz.description || '')}</p>
+                            </div>
+
+                            <!-- Info Peserta & Parameter Ujian -->
+                            <div class="p-6 sm:p-8 bg-slate-50/70 space-y-6">
+                                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center">
+                                            ${this.escapeHtml(s.name.charAt(0).toUpperCase())}
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-slate-900">${this.escapeHtml(s.name)}</div>
+                                            <div class="text-xs text-slate-500">NIS: ${this.escapeHtml(s.nis)} &bull; Kelas: <strong>${this.escapeHtml(s.studentClass)}</strong></div>
+                                        </div>
+                                    </div>
+                                    <button onclick="app.navigate('student-login')" class="text-xs font-semibold text-indigo-600 hover:underline self-start sm:self-center">
+                                        Ganti Peserta
+                                    </button>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-3 text-center">
+                                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80">
+                                        <div class="text-xs text-slate-400 font-medium mb-1">Jumlah Soal</div>
+                                        <div class="text-xl font-extrabold text-slate-900">${quiz.questions.length}</div>
+                                        <div class="text-[11px] text-slate-500">Butir Pertanyaan</div>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80">
+                                        <div class="text-xs text-slate-400 font-medium mb-1">Alokasi Waktu</div>
+                                        <div class="text-xl font-extrabold text-amber-600">${quiz.duration}</div>
+                                        <div class="text-[11px] text-slate-500">Menit</div>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80">
+                                        <div class="text-xs text-slate-400 font-medium mb-1">Standar KKM</div>
+                                        <div class="text-xl font-extrabold text-emerald-600">${quiz.kkm}</div>
+                                        <div class="text-[11px] text-slate-500">Skala 0 - 100</div>
+                                    </div>
+                                </div>
+
+                                <!-- Tata Tertib -->
+                                <div class="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-4">
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-amber-800 mb-2 flex items-center gap-1.5">
+                                        <i class="fas fa-exclamation-circle"></i> Petunjuk Pengerjaan Kuis
+                                    </h4>
+                                    <ul class="text-xs text-amber-900/90 space-y-1.5 list-disc list-inside">
+                                        <li>Waktu hitung mundur akan berjalan otomatis segera setelah tombol <strong>Mulai Kuis</strong> ditekan.</li>
+                                        <li>Gunakan panel navigasi nomor di sisi kanan untuk berpindah soal dengan cepat.</li>
+                                        <li>Tandai <strong>Ragu-ragu</strong> (kuning) jika ingin meninjau kembali soal sebelum dikumpulkan.</li>
+                                        <li>Jika waktu habis, sistem akan otomatis menyimpan dan mengumpulkan jawaban Anda.</li>
+                                    </ul>
+                                </div>
+
+                                <div class="flex items-center justify-between gap-3 pt-2">
+                                    <button onclick="app.navigate('student-login')" class="px-5 py-3 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 transition">
+                                        Kembali
+                                    </button>
+                                    <button onclick="app.startQuiz()" class="flex-1 py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2">
+                                        <i class="fas fa-play"></i>
+                                        <span>Mulai Kuis Sekarang</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            /**
+             * ========================================================================
+             * 2C. MODE SISWA: ANTARMUKA PENGERJAAN KUIS INTERAKTIF
+             * ========================================================================
+             */
+            startQuiz() {
+                const s = this.state.studentSession;
+                const quiz = s.activeQuiz;
+                if (!quiz) return;
+
+                s.currentQuestionIndex = 0;
+                s.answers = {};
+                s.flagged = {};
+                s.totalDurationSeconds = quiz.duration * 60;
+                s.remainingSeconds = quiz.duration * 60;
+
+                this.state.currentView = 'quiz-active';
+                this.render();
+                this.startQuizTimer();
+            },
+
+            startQuizTimer() {
+                this.stopQuizTimer();
+                this.state.studentSession.timerInterval = setInterval(() => {
+                    const s = this.state.studentSession;
+                    s.remainingSeconds--;
+
+                    const timerEl = document.getElementById('quiz-timer-display');
+                    const timerBox = document.getElementById('quiz-timer-box');
+                    if (timerEl) {
+                        timerEl.textContent = this.formatSeconds(s.remainingSeconds);
+                    }
+                    if (timerBox && s.remainingSeconds < 60) {
+                        timerBox.classList.add('timer-urgent');
+                    }
+
+                    if (s.remainingSeconds <= 0) {
+                        this.stopQuizTimer();
+                        this.showToast('Waktu habis! Jawaban Anda otomatis dikumpulkan.', 'warning');
+                        this.submitQuiz(true);
+                    }
+                }, 1000);
+            },
+
+            stopQuizTimer() {
+                if (this.state.studentSession.timerInterval) {
+                    clearInterval(this.state.studentSession.timerInterval);
+                    this.state.studentSession.timerInterval = null;
+                }
+            },
+
+            formatSeconds(sec) {
+                const safeSec = Math.max(0, sec);
+                const m = Math.floor(safeSec / 60).toString().padStart(2, '0');
+                const s = (safeSec % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            },
+
+            selectAnswer(qIdx, value) {
+                this.state.studentSession.answers[qIdx] = value;
+                this.render();
+            },
+
+            handleShortAnswerInput(qIdx, value) {
+                if (value.trim() === '') {
+                    delete this.state.studentSession.answers[qIdx];
+                } else {
+                    this.state.studentSession.answers[qIdx] = value;
+                }
+                // Update status indikator nomor soal tanpa merender ulang input agar fokus tidak hilang
+                this.updateQuestionNavGrid();
+            },
+
+            toggleFlagQuestion(qIdx) {
+                const s = this.state.studentSession;
+                s.flagged[qIdx] = !s.flagged[qIdx];
+                this.render();
+            },
+
+            goToQuestion(qIdx) {
+                const quiz = this.state.studentSession.activeQuiz;
+                if (qIdx >= 0 && qIdx < quiz.questions.length) {
+                    this.state.studentSession.currentQuestionIndex = qIdx;
+                    this.render();
+                }
+            },
+
+            updateQuestionNavGrid() {
+                const grid = document.getElementById('question-nav-grid');
+                if (!grid) return;
+                const s = this.state.studentSession;
+                const quiz = s.activeQuiz;
+
+                grid.innerHTML = quiz.questions.map((_, idx) => {
+                    const isActive = idx === s.currentQuestionIndex;
+                    const isFlagged = !!s.flagged[idx];
+                    const isAnswered = s.answers[idx] !== undefined && String(s.answers[idx]).trim() !== '';
+
+                    let btnClass = 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'; // Belum dijawab
+                    if (isAnswered) {
+                        btnClass = 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600'; // Sudah dijawab
+                    }
+                    if (isFlagged) {
+                        btnClass = 'bg-amber-400 text-slate-900 border-amber-500 hover:bg-amber-500'; // Ragu-ragu
+                    }
+                    if (isActive) {
+                        btnClass += ' ring-2 ring-offset-2 ring-indigo-600 font-extrabold';
+                    }
+
+                    return `
+                        <button type="button" onclick="app.goToQuestion(${idx})"
+                            class="h-10 rounded-xl border text-xs font-bold transition flex items-center justify-center relative ${btnClass}">
+                            ${idx + 1}
+                            ${isFlagged ? '<span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-600 border border-white"></span>' : ''}
+                        </button>
+                    `;
+                }).join('');
+            },
+
+            renderQuizActiveView() {
+                const s = this.state.studentSession;
+                const quiz = s.activeQuiz;
+                const qIdx = s.currentQuestionIndex;
+                const question = quiz.questions[qIdx];
+                const totalQ = quiz.questions.length;
+                const currentAnswer = s.answers[qIdx];
+                const isFlagged = !!s.flagged[qIdx];
+                const isUrgent = s.remainingSeconds < 60;
+
+                const optionLetters = ['A', 'B', 'C', 'D', 'E'];
+
+                // Render area jawaban sesuai tipe soal
+                let answerInputHtml = '';
+                if (question.type === 'mcq') {
+                    answerInputHtml = `
+                        <div class="space-y-3">
+                            ${question.options.map((opt, optIdx) => {
+                                const isSelected = String(currentAnswer) === String(optIdx);
+                                return `
+                                    <div onclick="app.selectAnswer(${qIdx}, '${optIdx}')"
+                                        class="p-4 rounded-2xl border-2 cursor-pointer transition flex items-center gap-3.5 ${isSelected ? 'border-indigo-600 bg-indigo-50/70 shadow-sm' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}">
+                                        <div class="w-9 h-9 rounded-xl font-bold text-sm flex items-center justify-center shrink-0 transition ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'}">
+                                            ${optionLetters[optIdx]}
+                                        </div>
+                                        <div class="text-sm font-medium text-slate-800 leading-relaxed">${this.escapeHtml(opt)}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else if (question.type === 'tf') {
+                    answerInputHtml = `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            ${['Benar', 'Salah'].map((label, optIdx) => {
+                                const isSelected = String(currentAnswer) === String(optIdx);
+                                const icon = optIdx === 0 ? 'fa-check-circle' : 'fa-times-circle';
+                                return `
+                                    <div onclick="app.selectAnswer(${qIdx}, '${optIdx}')"
+                                        class="p-5 rounded-2xl border-2 cursor-pointer transition flex items-center justify-center gap-3 ${isSelected ? 'border-indigo-600 bg-indigo-50/80 shadow-sm' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}">
+                                        <i class="fas ${icon} text-xl ${isSelected ? 'text-indigo-600' : 'text-slate-400'}"></i>
+                                        <span class="text-base font-bold ${isSelected ? 'text-indigo-900' : 'text-slate-700'}">${label}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else if (question.type === 'short') {
+                    answerInputHtml = `
+                        <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                Ketik Jawaban Singkat Anda:
+                            </label>
+                            <input type="text"
+                                value="${this.escapeHtml(currentAnswer || '')}"
+                                oninput="app.handleShortAnswerInput(${qIdx}, this.value)"
+                                placeholder="Masukkan jawaban singkat di sini..."
+                                class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none text-base font-semibold text-slate-900 bg-white transition">
+                            <p class="text-[11px] text-slate-400 mt-2"><i class="fas fa-info-circle mr-1"></i>Penilaian isian singkat tidak membedakan huruf besar/kecil (case-insensitive).</p>
+                        </div>
+                    `;
+                }
+
+                const typeBadges = {
+                    mcq: 'Pilihan Ganda',
+                    tf: 'Benar / Salah',
+                    short: 'Isian Singkat'
+                };
+
+                return `
+                    <!-- Bar Atas Informasi Peserta & Timer -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-center">
+                                ${this.escapeHtml(s.name.charAt(0).toUpperCase())}
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold text-slate-900">${this.escapeHtml(s.name)} <span class="text-xs font-normal text-slate-500">(${this.escapeHtml(s.studentClass)})</span></div>
+                                <div class="text-xs text-indigo-600 font-semibold">${this.escapeHtml(quiz.title)}</div>
+                            </div>
+                        </div>
+
+                        <div id="quiz-timer-box" class="flex items-center gap-2.5 px-4 py-2 rounded-xl border bg-slate-50 border-slate-200 transition ${isUrgent ? 'timer-urgent' : ''}">
+                            <i class="fas fa-hourglass-half text-sm"></i>
+                            <div>
+                                <div class="text-[10px] uppercase font-bold tracking-wider opacity-75">Sisa Waktu</div>
+                                <div id="quiz-timer-display" class="text-base font-mono font-extrabold leading-none">
+                                    ${this.formatSeconds(s.remainingSeconds)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grid Utama: Panel Soal (Kiri) & Navigasi Nomor (Kanan) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        <!-- Area Butir Soal -->
+                        <div class="lg:col-span-8 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                            <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-6 border-b border-slate-100">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-extrabold">
+                                        Soal No. ${qIdx + 1} / ${totalQ}
+                                    </span>
+                                    <span class="px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-semibold">
+                                        ${typeBadges[question.type] || 'Soal'}
+                                    </span>
+                                </div>
+                                <span class="text-xs font-semibold text-slate-400">
+                                    Bobot: ${question.points} Poin
+                                </span>
+                            </div>
+
+                            <!-- Teks Pertanyaan -->
+                            <div class="text-base sm:text-lg font-semibold text-slate-900 leading-relaxed mb-7">
+                                ${this.escapeHtml(question.text)}
+                            </div>
+
+                            <!-- Opsi / Input Jawaban -->
+                            <div class="mb-8">
+                                ${answerInputHtml}
+                            </div>
+
+                            <!-- Tombol Kontrol Navigasi Soal -->
+                            <div class="pt-5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                                <button type="button" onclick="app.goToQuestion(${qIdx - 1})" ${qIdx === 0 ? 'disabled' : ''}
+                                    class="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${qIdx === 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
+                                    <i class="fas fa-chevron-left"></i> Sebelumnya
+                                </button>
+
+                                <button type="button" onclick="app.toggleFlagQuestion(${qIdx})"
+                                    class="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 border transition ${isFlagged ? 'bg-amber-400 text-slate-900 border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}">
+                                    <i class="fas fa-flag"></i> ${isFlagged ? 'Ditandai Ragu-ragu' : 'Tandai Ragu-ragu'}
+                                </button>
+
+                                ${qIdx < totalQ - 1 ? `
+                                    <button type="button" onclick="app.goToQuestion(${qIdx + 1})"
+                                        class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-sm transition">
+                                        Selanjutnya <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                ` : `
+                                    <button type="button" onclick="app.confirmSubmitQuiz()"
+                                        class="px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 shadow-sm transition">
+                                        <i class="fas fa-paper-plane"></i> Selesai & Kumpulkan
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- Panel Samping: Navigasi Nomor Soal -->
+                        <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+                            <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center justify-between">
+                                <span>Navigasi Nomor Soal</span>
+                                <span class="text-xs font-normal text-slate-500">${Object.keys(s.answers).length}/${totalQ} Terjawab</span>
+                            </h3>
+
+                            <div id="question-nav-grid" class="grid grid-cols-5 gap-2.5 mb-6">
+                                ${quiz.questions.map((_, idx) => {
+                                    const isActive = idx === qIdx;
+                                    const flagged = !!s.flagged[idx];
+                                    const answered = s.answers[idx] !== undefined && String(s.answers[idx]).trim() !== '';
+
+                                    let btnClass = 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200';
+                                    if (answered) btnClass = 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600';
+                                    if (flagged) btnClass = 'bg-amber-400 text-slate-900 border-amber-500 hover:bg-amber-500';
+                                    if (isActive) btnClass += ' ring-2 ring-offset-2 ring-indigo-600 font-extrabold';
+
+                                    return `
+                                        <button type="button" onclick="app.goToQuestion(${idx})"
+                                            class="h-10 rounded-xl border text-xs font-bold transition flex items-center justify-center relative ${btnClass}">
+                                            ${idx + 1}
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+
+                            <!-- Legenda Status -->
+                            <div class="space-y-2 text-xs text-slate-600 border-t border-slate-100 pt-4 mb-6">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded bg-emerald-500 inline-block"></span>
+                                    <span>Sudah dijawab</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded bg-amber-400 inline-block"></span>
+                                    <span>Ragu-ragu</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded bg-slate-100 border border-slate-300 inline-block"></span>
+                                    <span>Belum dijawab</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded bg-white ring-2 ring-indigo-600 inline-block"></span>
+                                    <span>Soal sedang aktif</span>
+                                </div>
+                            </div>
+
+                            <button type="button" onclick="app.confirmSubmitQuiz()"
+                                class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2">
+                                <i class="fas fa-check-double"></i> Selesai & Kumpulkan
+                            </button>
+                        </div>
+                    </div>
+                `;
+            },
+
+            confirmSubmitQuiz() {
+                const s = this.state.studentSession;
+                const totalQ = s.activeQuiz.questions.length;
+                let answeredCount = 0;
+                let flaggedCount = 0;
+
+                for (let i = 0; i < totalQ; i++) {
+                    if (s.answers[i] !== undefined && String(s.answers[i]).trim() !== '') {
+                        answeredCount++;
+                    }
+                    if (s.flagged[i]) flaggedCount++;
+                }
+
+                const unansweredCount = totalQ - answeredCount;
+
+                let warningHtml = `
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5 mb-3 text-xs">
+                        <div class="flex justify-between"><span>Total Soal:</span> <strong>${totalQ} Soal</strong></div>
+                        <div class="flex justify-between text-emerald-700"><span>Sudah Dijawab:</span> <strong>${answeredCount} Soal</strong></div>
+                        <div class="flex justify-between text-rose-600"><span>Belum Dijawab:</span> <strong>${unansweredCount} Soal</strong></div>
+                        ${flaggedCount > 0 ? `<div class="flex justify-between text-amber-600"><span>Ditandai Ragu-ragu:</span> <strong>${flaggedCount} Soal</strong></div>` : ''}
+                    </div>
+                    <p>Apakah Anda yakin ingin mengakhiri ujian dan mengumpulkan semua jawaban sekarang?</p>
+                `;
+
+                this.showConfirm('Konfirmasi Pengumpulan Kuis', warningHtml, () => {
+                    this.submitQuiz(false);
+                });
+            },
+
+            submitQuiz(isAutoSubmit = false) {
+                this.stopQuizTimer();
+                const s = this.state.studentSession;
+                const quiz = s.activeQuiz;
+                if (!quiz) return;
+
+                let earnedPoints = 0;
+                let maxPoints = 0;
+                let correctCount = 0;
+                let wrongCount = 0;
+                let emptyCount = 0;
+
+                quiz.questions.forEach((q, idx) => {
+                    const pts = Number(q.points) || 10;
+                    maxPoints += pts;
+                    const userAns = s.answers[idx];
+
+                    if (userAns === undefined || String(userAns).trim() === '') {
+                        emptyCount++;
+                    } else {
+                        let isCorrect = false;
+                        if (q.type === 'short') {
+                            isCorrect = String(userAns).trim().toLowerCase() === String(q.answer).trim().toLowerCase();
+                        } else {
+                            isCorrect = String(userAns) === String(q.answer);
+                        }
+
+                        if (isCorrect) {
+                            earnedPoints += pts;
+                            correctCount++;
+                        } else {
+                            wrongCount++;
+                        }
+                    }
+                });
+
+                const finalScore = maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 0;
+                const passed = finalScore >= quiz.kkm;
+                const timeSpentSeconds = Math.max(1, s.totalDurationSeconds - s.remainingSeconds);
+
+                const now = new Date();
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                const submittedAt = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${now.toTimeString().slice(0, 5)}`;
+
+                const resultRecord = {
+                    id: 'RES-' + Date.now().toString().slice(-6),
+                    studentName: s.name,
+                    nis: s.nis,
+                    studentClass: s.studentClass,
+                    quizId: quiz.id,
+                    quizTitle: quiz.title,
+                    subject: quiz.subject,
+                    score: finalScore,
+                    kkm: quiz.kkm,
+                    passed,
+                    correctCount,
+                    wrongCount,
+                    emptyCount,
+                    totalQuestions: quiz.questions.length,
+                    timeSpentSeconds,
+                    submittedAt,
+                    answers: { ...s.answers }
+                };
+
+                this.state.results.unshift(resultRecord);
+                this.saveResults();
+                s.lastResult = resultRecord;
+
+                if (!isAutoSubmit) {
+                    this.showToast('Kuis berhasil dikumpulkan!', 'success');
+                }
+
+                this.state.currentView = 'quiz-result';
+                this.render();
+            },
+
+            /**
+             * ========================================================================
+             * 2D. MODE SISWA: HALAMAN HASIL & PEMBAHASAN OTOMATIS
+             * ========================================================================
+             */
+            renderQuizResultView() {
+                const res = this.state.studentSession.lastResult;
+                const quiz = this.state.studentSession.activeQuiz;
+                if (!res || !quiz) return this.renderHomeView();
+
+                const mins = Math.floor(res.timeSpentSeconds / 60);
+                const secs = res.timeSpentSeconds % 60;
+                const optionLetters = ['A', 'B', 'C', 'D', 'E'];
+
+                return `
+                    <div id="printable-area" class="max-w-4xl mx-auto space-y-6">
+                        <!-- Kartu Sertifikat / Skor Utama -->
+                        <div class="bg-white rounded-3xl border-2 ${res.passed ? 'border-emerald-200' : 'border-rose-200'} shadow-lg overflow-hidden">
+                            <div class="bg-gradient-to-r ${res.passed ? 'from-emerald-600 to-teal-600' : 'from-rose-600 to-orange-600'} px-6 py-8 text-white text-center relative">
+                                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wider mb-3">
+                                    <i class="fas ${res.passed ? 'fa-award' : 'fa-redo'}"></i>
+                                    ${res.passed ? 'Lulus Kriteria Ketuntasan Minimal (KKM)' : 'Belum Mencapai KKM (Remedial)'}
+                                </div>
+                                <h2 class="text-2xl sm:text-3xl font-extrabold mb-1">${this.escapeHtml(res.studentName)}</h2>
+                                <p class="text-xs sm:text-sm text-white/90">NIS: ${this.escapeHtml(res.nis)} &bull; Kelas: ${this.escapeHtml(res.studentClass)} &bull; ${this.escapeHtml(res.submittedAt)}</p>
+
+                                <div class="mt-6 inline-flex flex-col items-center justify-center w-32 h-32 rounded-full bg-white text-slate-900 shadow-xl border-4 ${res.passed ? 'border-emerald-200' : 'border-rose-200'}">
+                                    <span class="text-[11px] font-bold uppercase text-slate-400">Skor Akhir</span>
+                                    <span class="text-4xl font-extrabold ${res.passed ? 'text-emerald-600' : 'text-rose-600'}">${res.score}</span>
+                                    <span class="text-[11px] font-semibold text-slate-500">KKM: ${res.kkm}</span>
+                                </div>
+                            </div>
+
+                            <!-- Rincian Statistik Pengerjaan -->
+                            <div class="p-6 sm:p-8">
+                                <div class="text-center mb-6">
+                                    <div class="text-xs font-bold uppercase tracking-wider text-indigo-600">${this.escapeHtml(res.subject)}</div>
+                                    <div class="text-lg font-bold text-slate-900">${this.escapeHtml(res.quizTitle)}</div>
+                                </div>
+
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                                    <div class="bg-emerald-50 border border-emerald-100 p-3.5 rounded-2xl text-center">
+                                        <div class="text-xs text-emerald-700 font-medium">Jawaban Benar</div>
+                                        <div class="text-xl font-extrabold text-emerald-700">${res.correctCount}</div>
+                                    </div>
+                                    <div class="bg-rose-50 border border-rose-100 p-3.5 rounded-2xl text-center">
+                                        <div class="text-xs text-rose-700 font-medium">Jawaban Salah</div>
+                                        <div class="text-xl font-extrabold text-rose-700">${res.wrongCount}</div>
+                                    </div>
+                                    <div class="bg-slate-100 border border-slate-200 p-3.5 rounded-2xl text-center">
+                                        <div class="text-xs text-slate-600 font-medium">Tidak Dijawab</div>
+                                        <div class="text-xl font-extrabold text-slate-700">${res.emptyCount}</div>
+                                    </div>
+                                    <div class="bg-indigo-50 border border-indigo-100 p-3.5 rounded-2xl text-center">
+                                        <div class="text-xs text-indigo-700 font-medium">Waktu Pengerjaan</div>
+                                        <div class="text-xl font-extrabold text-indigo-700">${mins}m ${secs}d</div>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-wrap items-center justify-center gap-3 no-print">
+                                    <button onclick="window.print()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold flex items-center gap-2 transition shadow-sm">
+                                        <i class="fas fa-print"></i> Cetak Sertifikat / Hasil
+                                    </button>
+                                    <button onclick="app.navigate('analytics')" class="px-5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold flex items-center gap-2 transition">
+                                        <i class="fas fa-chart-bar"></i> Lihat Rekap Nilai Kelas
+                                    </button>
+                                    <button onclick="app.navigate('home')" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-2 transition shadow-sm">
+                                        <i class="fas fa-home"></i> Kembali ke Beranda
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pembahasan Lengkap Per Nomor Soal -->
+                        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                            <h3 class="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                <i class="fas fa-book-open text-indigo-600"></i> Review & Pembahasan Jawaban
+                            </h3>
+                            <p class="text-xs text-slate-500 mb-6">Evaluasi setiap butir soal beserta kunci jawaban dan penjelasan materi.</p>
+
+                            <div class="space-y-5">
+                                ${quiz.questions.map((q, idx) => {
+                                    const userRaw = res.answers[idx];
+                                    const isEmpty = userRaw === undefined || String(userRaw).trim() === '';
+                                    let isCorrect = false;
+                                    let userDisplay = 'Tidak dijawab';
+                                    let keyDisplay = '';
+
+                                    if (q.type === 'mcq') {
+                                        isCorrect = !isEmpty && String(userRaw) === String(q.answer);
+                                        if (!isEmpty) userDisplay = `${optionLetters[userRaw]}. ${q.options[userRaw]}`;
+                                        keyDisplay = `${optionLetters[q.answer]}. ${q.options[q.answer]}`;
+                                    } else if (q.type === 'tf') {
+                                        const tfLabels = ['Benar', 'Salah'];
+                                        isCorrect = !isEmpty && String(userRaw) === String(q.answer);
+                                        if (!isEmpty) userDisplay = tfLabels[userRaw];
+                                        keyDisplay = tfLabels[q.answer];
+                                    } else {
+                                        isCorrect = !isEmpty && String(userRaw).trim().toLowerCase() === String(q.answer).trim().toLowerCase();
+                                        if (!isEmpty) userDisplay = userRaw;
+                                        keyDisplay = q.answer;
+                                    }
+
+                                    const statusBadge = isEmpty
+                                        ? '<span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold">Kosong</span>'
+                                        : isCorrect
+                                            ? '<span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold"><i class="fas fa-check mr-1"></i>Benar</span>'
+                                            : '<span class="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 text-xs font-bold"><i class="fas fa-times mr-1"></i>Salah</span>';
+
+                                    return `
+                                        <div class="p-5 rounded-2xl border ${isCorrect ? 'border-emerald-200 bg-emerald-50/20' : 'border-slate-200 bg-slate-50/40'}">
+                                            <div class="flex items-center justify-between gap-2 mb-2.5">
+                                                <span class="text-xs font-extrabold text-indigo-700">Pertanyaan #${idx + 1}</span>
+                                                ${statusBadge}
+                                            </div>
+                                            <p class="text-sm font-semibold text-slate-900 mb-4">${this.escapeHtml(q.text)}</p>
+                                            
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mb-3">
+                                                <div class="p-3 rounded-xl bg-white border ${isCorrect ? 'border-emerald-200' : 'border-rose-200'}">
+                                                    <span class="text-slate-400 block mb-0.5">Jawaban Anda:</span>
+                                                    <strong class="${isEmpty ? 'text-slate-400 italic' : isCorrect ? 'text-emerald-700' : 'text-rose-700'}">${this.escapeHtml(userDisplay)}</strong>
+                                                </div>
+                                                <div class="p-3 rounded-xl bg-white border border-emerald-200">
+                                                    <span class="text-slate-400 block mb-0.5">Kunci Jawaban:</span>
+                                                    <strong class="text-emerald-700">${this.escapeHtml(keyDisplay)}</strong>
+                                                </div>
+                                            </div>
+
+                                            ${q.explanation ? `
+                                                <div class="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-100 text-xs text-slate-700 leading-relaxed">
+                                                    <strong class="text-indigo-800"><i class="fas fa-lightbulb text-amber-500 mr-1"></i>Pembahasan:</strong> ${this.escapeHtml(q.explanation)}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            /**
+             * ========================================================================
+             * 3. MODE GURU / MANAJEMEN KUIS & BANK SOAL (CRUD + JSON IMPORT/EXPORT)
+             * ========================================================================
+             */
+            renderTeacherView() {
+                if (this.state.teacherState.editingQuizId !== null) {
+                    return this.renderTeacherQuizEditor();
+                }
+
+                return `
+                    <div class="space-y-6">
+                        <!-- Header Mode Guru -->
+                        <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Panel Administrator & Pendidik</span>
+                                <h2 class="text-2xl font-extrabold text-slate-900 mt-1">Manajemen Paket Kuis & Bank Soal</h2>
+                                <p class="text-xs text-slate-500 mt-1">Buat paket ujian baru, kelola butir soal berbagai tipe, atau ekspor/impor file JSON bank soal.</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2.5">
+                                <label class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-2">
+                                    <i class="fas fa-file-import text-indigo-600"></i> Import JSON
+                                    <input type="file" accept=".json" onchange="app.importQuizJSON(event)" class="hidden">
+                                </label>
+                                <button onclick="app.exportAllQuizzesJSON()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2">
+                                    <i class="fas fa-file-export text-emerald-600"></i> Export Semua JSON
+                                </button>
+                                <button onclick="app.openQuizEditor('NEW')" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition flex items-center gap-2">
+                                    <i class="fas fa-plus"></i> Buat Paket Kuis Baru
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabel / Daftar Paket Kuis -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            ${this.state.quizzes.map(quiz => `
+                                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center justify-between gap-2 mb-3">
+                                            <span class="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold">${this.escapeHtml(quiz.subject)}</span>
+                                            <span class="text-xs font-mono text-slate-400">${this.escapeHtml(quiz.id)}</span>
+                                        </div>
+                                        <h3 class="text-lg font-bold text-slate-900 mb-1.5">${this.escapeHtml(quiz.title)}</h3>
+                                        <p class="text-xs text-slate-500 mb-4 line-clamp-2">${this.escapeHtml(quiz.description || 'Tidak ada deskripsi.')}</p>
+                                    </div>
+
+                                    <div>
+                                        <div class="flex items-center gap-4 text-xs text-slate-600 bg-slate-50 px-3.5 py-2.5 rounded-xl mb-4">
+                                            <span><i class="fas fa-list-ol text-indigo-500 mr-1"></i><strong>${quiz.questions.length}</strong> Soal</span>
+                                            <span><i class="fas fa-clock text-amber-500 mr-1"></i><strong>${quiz.duration}</strong> Menit</span>
+                                            <span><i class="fas fa-check-circle text-emerald-500 mr-1"></i>KKM <strong>${quiz.kkm}</strong></span>
+                                        </div>
+
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="app.openQuizEditor('${quiz.id}')" class="flex-1 py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition flex items-center justify-center gap-1.5">
+                                                <i class="fas fa-edit"></i> Edit Paket & Soal
+                                            </button>
+                                            <button onclick="app.exportSingleQuizJSON('${quiz.id}')" title="Export JSON Paket Ini" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            <button onclick="app.deleteQuiz('${quiz.id}')" title="Hapus Paket" class="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs transition">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            },
+
+            openQuizEditor(quizId) {
+                if (quizId === 'NEW') {
+                    this.state.teacherState.editingQuizId = 'NEW';
+                    this.state.teacherState.draftQuiz = {
+                        id: 'QZ-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.floor(10 + Math.random() * 90),
+                        title: '',
+                        subject: '',
+                        duration: 15,
+                        kkm: 75,
+                        description: '',
+                        questions: [
+                            {
+                                id: 'q_' + Date.now(),
+                                type: 'mcq',
+                                text: '',
+                                options: ['', '', '', '', ''],
+                                answer: '0',
+                                points: 25,
+                                explanation: ''
+                            }
+                        ]
+                    };
+                } else {
+                    const existing = this.state.quizzes.find(q => q.id === quizId);
+                    if (!existing) return;
+                    this.state.teacherState.editingQuizId = quizId;
+                    this.state.teacherState.draftQuiz = JSON.parse(JSON.stringify(existing));
+                }
+                this.render();
+            },
+
+            syncDraftMetaFromInputs() {
+                const draft = this.state.teacherState.draftQuiz;
+                if (!draft) return;
+                const elTitle = document.getElementById('draft-title');
+                const elSubject = document.getElementById('draft-subject');
+                const elDuration = document.getElementById('draft-duration');
+                const elKkm = document.getElementById('draft-kkm');
+                const elDesc = document.getElementById('draft-desc');
+
+                if (elTitle) draft.title = elTitle.value;
+                if (elSubject) draft.subject = elSubject.value;
+                if (elDuration) draft.duration = parseInt(elDuration.value, 10) || 10;
+                if (elKkm) draft.kkm = parseInt(elKkm.value, 10) || 75;
+                if (elDesc) draft.description = elDesc.value;
+            },
+
+            addDraftQuestion() {
+                this.syncDraftMetaFromInputs();
+                const draft = this.state.teacherState.draftQuiz;
+                draft.questions.push({
+                    id: 'q_' + Date.now() + '_' + draft.questions.length,
+                    type: 'mcq',
+                    text: '',
+                    options: ['', '', '', '', ''],
+                    answer: '0',
+                    points: 20,
+                    explanation: ''
+                });
+                this.render();
+            },
+
+            removeDraftQuestion(qIdx) {
+                this.syncDraftMetaFromInputs();
+                const draft = this.state.teacherState.draftQuiz;
+                if (draft.questions.length <= 1) {
+                    this.showToast('Minimal harus terdapat 1 butir soal dalam paket kuis.', 'warning');
+                    return;
+                }
+                draft.questions.splice(qIdx, 1);
+                this.render();
+            },
+
+            changeDraftQuestionType(qIdx, newType) {
+                this.syncDraftMetaFromInputs();
+                const q = this.state.teacherState.draftQuiz.questions[qIdx];
+                q.type = newType;
+                if (newType === 'mcq') {
+                    q.options = ['', '', '', '', ''];
+                    q.answer = '0';
+                } else if (newType === 'tf') {
+                    q.options = ['Benar', 'Salah'];
+                    q.answer = '0';
+                } else if (newType === 'short') {
+                    q.options = [];
+                    q.answer = '';
+                }
+                this.render();
+            },
+
+            updateDraftQuestionField(qIdx, field, value, optIdx = null) {
+                const q = this.state.teacherState.draftQuiz.questions[qIdx];
+                if (!q) return;
+                if (field === 'option' && optIdx !== null) {
+                    q.options[optIdx] = value;
+                } else if (field === 'points') {
+                    q.points = parseInt(value, 10) || 10;
+                } else {
+                    q[field] = value;
+                }
+            },
+
+            saveDraftQuiz(e) {
+                e.preventDefault();
+                this.syncDraftMetaFromInputs();
+                const draft = this.state.teacherState.draftQuiz;
+
+                if (!draft.title.trim() || !draft.subject.trim()) {
+                    this.showToast('Judul Kuis dan Mata Pelajaran wajib diisi!', 'error');
+                    return;
+                }
+
+                for (let i = 0; i < draft.questions.length; i++) {
+                    const q = draft.questions[i];
+                    if (!q.text.trim()) {
+                        this.showToast(`Teks pertanyaan pada Soal #${i + 1} belum diisi!`, 'error');
+                        return;
+                    }
+                    if (q.type === 'mcq' && q.options.some(opt => !opt.trim())) {
+                        this.showToast(`Semua opsi jawaban (A-E) pada Soal #${i + 1} wajib diisi!`, 'error');
+                        return;
+                    }
+                    if (q.type === 'short' && !String(q.answer).trim()) {
+                        this.showToast(`Kunci jawaban isian singkat pada Soal #${i + 1} wajib diisi!`, 'error');
+                        return;
+                    }
+                }
+
+                if (this.state.teacherState.editingQuizId === 'NEW') {
+                    this.state.quizzes.unshift(draft);
+                    this.showToast('Paket kuis baru berhasil ditambahkan!', 'success');
+                } else {
+                    const idx = this.state.quizzes.findIndex(q => q.id === draft.id);
+                    if (idx !== -1) {
+                        this.state.quizzes[idx] = draft;
+                    }
+                    this.showToast('Perubahan paket kuis berhasil disimpan!', 'success');
+                }
+
+                this.saveQuizzes();
+                this.state.teacherState.editingQuizId = null;
+                this.state.teacherState.draftQuiz = null;
+                this.render();
+            },
+
+            deleteQuiz(quizId) {
+                if (this.state.quizzes.length <= 1) {
+                    this.showToast('Minimal harus tersisa 1 paket kuis di dalam sistem.', 'warning');
+                    return;
+                }
+                this.showConfirm(
+                    'Hapus Paket Kuis?',
+                    'Paket kuis beserta seluruh butir soal di dalamnya akan dihapus permanen. Lanjutkan?',
+                    () => {
+                        this.state.quizzes = this.state.quizzes.filter(q => q.id !== quizId);
+                        this.saveQuizzes();
+                        this.showToast('Paket kuis berhasil dihapus.', 'success');
+                        this.render();
+                    },
+                    'danger'
+                );
+            },
+
+            renderTeacherQuizEditor() {
+                const draft = this.state.teacherState.draftQuiz;
+                const isNew = this.state.teacherState.editingQuizId === 'NEW';
+                const optionLetters = ['A', 'B', 'C', 'D', 'E'];
+
+                return `
+                    <form onsubmit="app.saveDraftQuiz(event)" class="max-w-4xl mx-auto space-y-6">
+                        <div class="flex items-center justify-between gap-4">
+                            <button type="button" onclick="app.navigate('teacher')" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition flex items-center gap-2">
+                                <i class="fas fa-arrow-left"></i> Kembali ke Daftar Kuis
+                            </button>
+                            <span class="text-xs font-mono bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg font-bold">
+                                Kode Paket: ${this.escapeHtml(draft.id)}
+                            </span>
+                        </div>
+
+                        <!-- Pengaturan Umum Paket Kuis -->
+                        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                            <h2 class="text-xl font-extrabold text-slate-900 mb-5">
+                                ${isNew ? 'Buat Paket Kuis Baru' : 'Edit Paket Kuis & Butir Soal'}
+                            </h2>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Judul Paket Kuis *</label>
+                                    <input type="text" id="draft-title" required value="${this.escapeHtml(draft.title)}"
+                                        placeholder="Contoh: Ulangan Harian Trigonometri"
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Mata Pelajaran *</label>
+                                    <input type="text" id="draft-subject" required value="${this.escapeHtml(draft.subject)}"
+                                        placeholder="Contoh: Matematika Wajib"
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-sm">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Durasi Pengerjaan (Menit) *</label>
+                                    <input type="number" id="draft-duration" min="1" max="180" required value="${draft.duration}"
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Nilai KKM (0 - 100) *</label>
+                                    <input type="number" id="draft-kkm" min="1" max="100" required value="${draft.kkm}"
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Total Butir Soal</label>
+                                    <input type="text" disabled value="${draft.questions.length} Pertanyaan"
+                                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Deskripsi Singkat Kuis</label>
+                                <input type="text" id="draft-desc" value="${this.escapeHtml(draft.description)}"
+                                    placeholder="Keterangan ruang lingkup materi yang diujikan..."
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Daftar Editor Butir Soal -->
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-bold text-slate-900">Daftar Butir Pertanyaan (${draft.questions.length})</h3>
+                                <button type="button" onclick="app.addDraftQuestion()" class="px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center gap-1.5">
+                                    <i class="fas fa-plus"></i> Tambah Soal
+                                </button>
+                            </div>
+
+                            ${draft.questions.map((q, qIdx) => `
+                                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+                                    <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
+                                        <span class="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-bold">Soal #${qIdx + 1}</span>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <select onchange="app.changeDraftQuestionType(${qIdx}, this.value)"
+                                                class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-semibold bg-slate-50 outline-none">
+                                                <option value="mcq" ${q.type === 'mcq' ? 'selected' : ''}>Pilihan Ganda (A-E)</option>
+                                                <option value="tf" ${q.type === 'tf' ? 'selected' : ''}>Benar / Salah</option>
+                                                <option value="short" ${q.type === 'short' ? 'selected' : ''}>Isian Singkat</option>
+                                            </select>
+
+                                            <div class="flex items-center gap-1 bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1">
+                                                <span class="text-[11px] text-slate-500">Bobot:</span>
+                                                <input type="number" min="1" max="100" value="${q.points}"
+                                                    oninput="app.updateDraftQuestionField(${qIdx}, 'points', this.value)"
+                                                    class="w-12 text-xs font-bold text-slate-800 bg-transparent outline-none text-center">
+                                            </div>
+
+                                            <button type="button" onclick="app.removeDraftQuestion(${qIdx})"
+                                                class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs transition" title="Hapus Soal Ini">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 mb-1">Teks Pertanyaan *</label>
+                                            <textarea rows="2" required oninput="app.updateDraftQuestionField(${qIdx}, 'text', this.value)"
+                                                placeholder="Tuliskan soal atau pertanyaan di sini..."
+                                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-sm">${this.escapeHtml(q.text)}</textarea>
+                                        </div>
+
+                                        <!-- Area Opsi & Kunci Berdasarkan Tipe Soal -->
+                                        ${q.type === 'mcq' ? `
+                                            <div class="space-y-2.5">
+                                                <label class="block text-xs font-bold text-slate-600">Pilihan Jawaban & Tandai Kunci Jawaban Benar:</label>
+                                                ${q.options.map((opt, optIdx) => `
+                                                    <div class="flex items-center gap-2.5">
+                                                        <input type="radio" name="correct_${qIdx}" value="${optIdx}" ${String(q.answer) === String(optIdx) ? 'checked' : ''}
+                                                            onchange="app.updateDraftQuestionField(${qIdx}, 'answer', '${optIdx}')"
+                                                            class="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer" title="Jadikan Kunci Jawaban">
+                                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">${optionLetters[optIdx]}</span>
+                                                        <input type="text" required value="${this.escapeHtml(opt)}"
+                                                            oninput="app.updateDraftQuestionField(${qIdx}, 'option', this.value, ${optIdx})"
+                                                            placeholder="Teks pilihan ${optionLetters[optIdx]}..."
+                                                            class="flex-1 px-3 py-2 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-xs">
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        ` : q.type === 'tf' ? `
+                                            <div>
+                                                <label class="block text-xs font-bold text-slate-600 mb-1.5">Kunci Jawaban Benar / Salah:</label>
+                                                <div class="flex gap-4">
+                                                    <label class="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 cursor-pointer bg-slate-50">
+                                                        <input type="radio" name="correct_${qIdx}" value="0" ${String(q.answer) === '0' ? 'checked' : ''}
+                                                            onchange="app.updateDraftQuestionField(${qIdx}, 'answer', '0')">
+                                                        <span class="text-xs font-bold text-emerald-700">Benar</span>
+                                                    </label>
+                                                    <label class="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 cursor-pointer bg-slate-50">
+                                                        <input type="radio" name="correct_${qIdx}" value="1" ${String(q.answer) === '1' ? 'checked' : ''}
+                                                            onchange="app.updateDraftQuestionField(${qIdx}, 'answer', '1')">
+                                                        <span class="text-xs font-bold text-rose-700">Salah</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        ` : `
+                                            <div>
+                                                <label class="block text-xs font-bold text-slate-600 mb-1">Kunci Jawaban Isian Singkat *</label>
+                                                <input type="text" required value="${this.escapeHtml(q.answer)}"
+                                                    oninput="app.updateDraftQuestionField(${qIdx}, 'answer', this.value)"
+                                                    placeholder="Contoh: 40 atau fotosintesis"
+                                                    class="w-full px-3.5 py-2 rounded-xl border border-emerald-300 bg-emerald-50/30 focus:border-emerald-500 outline-none text-sm font-semibold">
+                                            </div>
+                                        `}
+
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 mb-1">Pembahasan / Penjelasan Materi (Ditampilkan setelah kuis selesai)</label>
+                                            <input type="text" value="${this.escapeHtml(q.explanation || '')}"
+                                                oninput="app.updateDraftQuestionField(${qIdx}, 'explanation', this.value)"
+                                                placeholder="Tuliskan langkah penyelesaian atau alasan jawaban benar..."
+                                                class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-500 outline-none text-xs">
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Tombol Simpan Akhir -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3 sticky bottom-4 shadow-lg">
+                            <button type="button" onclick="app.addDraftQuestion()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2">
+                                <i class="fas fa-plus-circle text-indigo-600"></i> Tambah Butir Soal Lagi
+                            </button>
+                            <div class="flex items-center gap-2.5">
+                                <button type="button" onclick="app.navigate('teacher')" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition">
+                                    Batal
+                                </button>
+                                <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition flex items-center gap-2">
+                                    <i class="fas fa-save"></i> Simpan Paket Kuis
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                `;
+            },
+
+            exportSingleQuizJSON(quizId) {
+                const quiz = this.state.quizzes.find(q => q.id === quizId);
+                if (!quiz) return;
+                this.downloadFile(JSON.stringify([quiz], null, 2), `${quiz.id}_bank_soal.json`, 'application/json');
+                this.showToast(`Paket kuis ${quiz.id} berhasil diunduh (JSON).`, 'success');
+            },
+
+            exportAllQuizzesJSON() {
+                this.downloadFile(JSON.stringify(this.state.quizzes, null, 2), `eduquiz_semua_bank_soal.json`, 'application/json');
+                this.showToast('Seluruh bank soal berhasil diekspor ke JSON.', 'success');
+            },
+
+            importQuizJSON(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        const importedList = Array.isArray(parsed) ? parsed : [parsed];
+                        let addedCount = 0;
+
+                        importedList.forEach(item => {
+                            if (item && item.title && item.subject && Array.isArray(item.questions) && item.questions.length > 0) {
+                                // Buat ID unik jika bentrok
+                                if (this.state.quizzes.some(q => q.id === item.id)) {
+                                    item.id = 'QZ-IMP-' + Math.floor(100 + Math.random() * 900);
+                                }
+                                this.state.quizzes.unshift(item);
+                                addedCount++;
+                            }
+                        });
+
+                        if (addedCount > 0) {
+                            this.saveQuizzes();
+                            this.showToast(`Berhasil mengimpor ${addedCount} paket kuis!`, 'success');
+                            this.render();
+                        } else {
+                            this.showToast('Format JSON kuis tidak valid atau kosong.', 'error');
+                        }
+                    } catch (err) {
+                        this.showToast('Gagal membaca file JSON. Pastikan format valid.', 'error');
+                    }
+                    event.target.value = '';
+                };
+                reader.readAsText(file);
+            },
+
+            /**
+             * ========================================================================
+             * 4. DASHBOARD REKAP NILAI & ANALITIK HASIL BELAJAR
+             * ========================================================================
+             */
+            updateAnalyticsFilter(key, value) {
+                this.state.analyticsFilter[key] = value;
+                this.render();
+            },
+
+            renderAnalyticsView() {
+                const f = this.state.analyticsFilter;
+                const allResults = this.state.results;
+
+                // Filter hasil
+                const filtered = allResults.filter(r => {
+                    const matchSearch = r.studentName.toLowerCase().includes(f.search.toLowerCase()) ||
+                                        r.nis.toLowerCase().includes(f.search.toLowerCase());
+                    const matchClass = f.classFilter === 'ALL' || r.studentClass === f.classFilter;
+                    const matchQuiz = f.quizFilter === 'ALL' || r.quizId === f.quizFilter;
+                    return matchSearch && matchClass && matchQuiz;
+                });
+
+                // Hitung Statistik Analitik dari data terfilter
+                const count = filtered.length;
+                const avgScore = count > 0 ? Math.round(filtered.reduce((acc, r) => acc + r.score, 0) / count) : 0;
+                const maxScore = count > 0 ? Math.max(...filtered.map(r => r.score)) : 0;
+                const minScore = count > 0 ? Math.min(...filtered.map(r => r.score)) : 0;
+                const passedCount = filtered.filter(r => r.passed).length;
+                const remedialCount = count - passedCount;
+                const passRate = count > 0 ? Math.round((passedCount / count) * 100) : 0;
+
+                const uniqueClasses = [...new Set(allResults.map(r => r.studentClass))].sort();
+
+                return `
+                    <div class="space-y-6">
+                        <!-- Header Analitik -->
+                        <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Laporan Evaluasi Pembelajaran</span>
+                                <h2 class="text-2xl font-extrabold text-slate-900 mt-1">Rekap Nilai & Analitik Capaian Siswa</h2>
+                                <p class="text-xs text-slate-500 mt-1">Pantau distribusi nilai, ketuntasan KKM, serta unduh laporan hasil ujian dalam format CSV (Excel).</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2.5">
+                                <button onclick="app.exportResultsCSV()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-2">
+                                    <i class="fas fa-file-excel"></i> Export ke CSV (Excel)
+                                </button>
+                                ${allResults.length > 0 ? `
+                                    <button onclick="app.clearAllResults()" class="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition flex items-center gap-2">
+                                        <i class="fas fa-trash"></i> Bersihkan Riwayat
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Kartu Statistik Ringkas -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                                <div class="text-xs font-semibold text-slate-400 mb-1">Rata-rata Nilai</div>
+                                <div class="text-3xl font-extrabold text-indigo-600">${avgScore}</div>
+                                <div class="text-[11px] text-slate-500 mt-1">Dari ${count} data peserta</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                                <div class="text-xs font-semibold text-slate-400 mb-1">Nilai Tertinggi</div>
+                                <div class="text-3xl font-extrabold text-emerald-600">${maxScore}</div>
+                                <div class="text-[11px] text-slate-500 mt-1">Capaian maksimal</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                                <div class="text-xs font-semibold text-slate-400 mb-1">Nilai Terendah</div>
+                                <div class="text-3xl font-extrabold text-amber-600">${minScore}</div>
+                                <div class="text-[11px] text-slate-500 mt-1">Perlu pendampingan</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                                <div class="text-xs font-semibold text-slate-400 mb-1">Ketuntasan (Lulus KKM)</div>
+                                <div class="text-3xl font-extrabold text-slate-900">${passRate}%</div>
+                                <div class="text-[11px] text-slate-500 mt-1">${passedCount} Lulus &bull; ${remedialCount} Remedial</div>
+                            </div>
+                        </div>
+
+                        <!-- Visualisasi Progress Bar Ketuntasan -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex items-center justify-between text-xs font-bold mb-2">
+                                <span class="text-emerald-700"><i class="fas fa-check-circle mr-1"></i>Lulus KKM (${passedCount} Siswa - ${passRate}%)</span>
+                                <span class="text-rose-600"><i class="fas fa-exclamation-circle mr-1"></i>Remedial (${remedialCount} Siswa - ${count > 0 ? 100 - passRate : 0}%)</span>
+                            </div>
+                            <div class="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex">
+                                <div style="width: ${passRate}%" class="bg-emerald-500 h-full transition-all duration-500"></div>
+                                <div style="width: ${count > 0 ? 100 - passRate : 0}%" class="bg-rose-500 h-full transition-all duration-500"></div>
+                            </div>
+                        </div>
+
+                        <!-- Filter & Pencarian -->
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                    <i class="fas fa-search text-xs"></i>
+                                </span>
+                                <input type="text" value="${this.escapeHtml(f.search)}"
+                                    oninput="app.updateAnalyticsFilter('search', this.value)"
+                                    placeholder="Cari nama siswa atau NIS..."
+                                    class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-xs">
+                            </div>
+
+                            <div>
+                                <select onchange="app.updateAnalyticsFilter('classFilter', this.value)"
+                                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-xs bg-white">
+                                    <option value="ALL">Semua Kelas / Rombel</option>
+                                    ${uniqueClasses.map(c => `<option value="${c}" ${f.classFilter === c ? 'selected' : ''}>Kelas ${c}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <div>
+                                <select onchange="app.updateAnalyticsFilter('quizFilter', this.value)"
+                                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-xs bg-white">
+                                    <option value="ALL">Semua Paket Kuis</option>
+                                    ${this.state.quizzes.map(q => `<option value="${q.id}" ${f.quizFilter === q.id ? 'selected' : ''}>${this.escapeHtml(q.subject)} - ${this.escapeHtml(q.title)}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Tabel Hasil Pengerjaan Peserta Didik -->
+                        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                            <th class="py-3.5 px-4">Peserta Didik</th>
+                                            <th class="py-3.5 px-4">Kelas</th>
+                                            <th class="py-3.5 px-4">Paket Kuis</th>
+                                            <th class="py-3.5 px-4 text-center">B / S / K</th>
+                                            <th class="py-3.5 px-4 text-center">Skor</th>
+                                            <th class="py-3.5 px-4 text-center">Status</th>
+                                            <th class="py-3.5 px-4">Waktu & Tanggal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs">
+                                        ${filtered.length === 0 ? `
+                                            <tr>
+                                                <td colspan="7" class="py-10 text-center text-slate-400">
+                                                    <i class="fas fa-folder-open text-2xl mb-2 block"></i>
+                                                    Tidak ada data hasil pengerjaan yang sesuai filter.
+                                                </td>
+                                            </tr>
+                                        ` : filtered.map(r => {
+                                            const m = Math.floor(r.timeSpentSeconds / 60);
+                                            const s = r.timeSpentSeconds % 60;
+                                            return `
+                                                <tr class="hover:bg-slate-50/80 transition">
+                                                    <td class="py-3.5 px-4">
+                                                        <div class="font-bold text-slate-900">${this.escapeHtml(r.studentName)}</div>
+                                                        <div class="text-[11px] text-slate-400 font-mono">NIS: ${this.escapeHtml(r.nis)}</div>
+                                                    </td>
+                                                    <td class="py-3.5 px-4 font-semibold text-slate-700">
+                                                        <span class="px-2.5 py-1 rounded-lg bg-slate-100">${this.escapeHtml(r.studentClass)}</span>
+                                                    </td>
+                                                    <td class="py-3.5 px-4">
+                                                        <div class="font-semibold text-slate-800">${this.escapeHtml(r.quizTitle)}</div>
+                                                        <div class="text-[11px] text-indigo-600">${this.escapeHtml(r.subject)}</div>
+                                                    </td>
+                                                    <td class="py-3.5 px-4 text-center font-mono">
+                                                        <span class="text-emerald-600 font-bold">${r.correctCount}</span> /
+                                                        <span class="text-rose-600 font-bold">${r.wrongCount}</span> /
+                                                        <span class="text-slate-400">${r.emptyCount}</span>
+                                                    </td>
+                                                    <td class="py-3.5 px-4 text-center">
+                                                        <span class="text-sm font-extrabold ${r.passed ? 'text-emerald-600' : 'text-rose-600'}">${r.score}</span>
+                                                        <span class="block text-[10px] text-slate-400">KKM ${r.kkm}</span>
+                                                    </td>
+                                                    <td class="py-3.5 px-4 text-center">
+                                                        ${r.passed
+                                                            ? '<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[11px]">Lulus</span>'
+                                                            : '<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold text-[11px]">Remedial</span>'
+                                                        }
+                                                    </td>
+                                                    <td class="py-3.5 px-4 text-slate-500">
+                                                        <div>${this.escapeHtml(r.submittedAt)}</div>
+                                                        <div class="text-[11px] text-slate-400">Durasi: ${m}m ${s}d</div>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            exportResultsCSV() {
+                if (this.state.results.length === 0) {
+                    this.showToast('Belum ada data nilai untuk diekspor.', 'warning');
+                    return;
+                }
+
+                const headers = ['ID Hasil', 'Nama Siswa', 'NIS', 'Kelas', 'Kode Kuis', 'Mata Pelajaran', 'Judul Kuis', 'Benar', 'Salah', 'Kosong', 'Skor Akhir', 'KKM', 'Status', 'Durasi (Detik)', 'Waktu Selesai'];
+                const rows = this.state.results.map(r => [
+                    r.id,
+                    `"${r.studentName.replace(/"/g, '""')}"`,
+                    `"${r.nis}"`,
+                    `"${r.studentClass}"`,
+                    r.quizId,
+                    `"${r.subject.replace(/"/g, '""')}"`,
+                    `"${r.quizTitle.replace(/"/g, '""')}"`,
+                    r.correctCount,
+                    r.wrongCount,
+                    r.emptyCount,
+                    r.score,
+                    r.kkm,
+                    r.passed ? 'LULUS' : 'REMEDIAL',
+                    r.timeSpentSeconds,
+                    `"${r.submittedAt}"`
+                ]);
+
+                const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+                this.downloadFile(csvContent, `Rekap_Nilai_EduQuiz_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
+                this.showToast('Rekap nilai berhasil diunduh dalam format CSV.', 'success');
+            },
+
+            clearAllResults() {
+                this.showConfirm(
+                    'Hapus Seluruh Riwayat Nilai?',
+                    'Semua data nilai peserta didik di tabel rekap akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+                    () => {
+                        this.state.results = [];
+                        this.saveResults();
+                        this.showToast('Seluruh riwayat nilai telah dibersihkan.', 'success');
+                        this.render();
+                    },
+                    'danger'
+                );
+            },
+
+            /**
+             * ========================================================================
+             * UTILITAS UMUM
+             * ========================================================================
+             */
+            downloadFile(content, filename, mimeType) {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+
+            escapeHtml(str) {
+                if (str === null || str === undefined) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+        };
+
+        // Jalankan aplikasi setelah DOM selesai dimuat
+        window.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
